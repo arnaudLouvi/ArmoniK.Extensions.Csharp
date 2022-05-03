@@ -48,7 +48,7 @@ namespace ArmoniK.EndToEndTests
     private static void Main()
     {
       Console.WriteLine("Hello Armonik End to End Tests !");
-
+      Console.WriteLine($"Working Directory {Directory.GetCurrentDirectory()}");
 
       var builder = new ConfigurationBuilder().SetBasePath(Directory.GetCurrentDirectory())
                                               .AddJsonFile("appsettings.json",

@@ -40,6 +40,7 @@ using Microsoft.Extensions.Logging;
 
 using System.Collections.Generic;
 using System.Net.Http;
+using System.Runtime.InteropServices;
 using System.Security.Cryptography.X509Certificates;
 
 using Grpc.Core;
@@ -139,6 +140,8 @@ namespace ArmoniK.DevelopmentKit.SymphonyApi.Client
         if (controlPlanAddress_.GetSection("SSLValidation").Exists() && controlPlanAddress_["SSLValidation"] == "disable")
         {
           httpClientHandler.ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator;
+          AppContext.SetSwitch("System.Net.Http.SocketsHttpHandler.Http2UnencryptedSupport",
+                               true);
         } 
 
         var clientCertFilename = "";
@@ -155,8 +158,19 @@ namespace ArmoniK.DevelopmentKit.SymphonyApi.Client
           var clientCertPem = File.ReadAllText(clientCertFilename);
           var clientKeyPem  = File.ReadAllText(clientKeyFilename);
 
+
           var cert = X509Certificate2.CreateFromPem(clientCertPem,
                                                     clientKeyPem);
+
+          // Resolve issue with Windows on pem bug with windows
+          // https://github.com/dotnet/runtime/issues/23749#issuecomment-388231655
+
+          if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+          {
+            var originalCert = cert;
+            cert = new X509Certificate2(cert.Export(X509ContentType.Pkcs12));
+            originalCert.Dispose();
+          }
 
           httpClientHandler.ClientCertificates.Add(cert);
 

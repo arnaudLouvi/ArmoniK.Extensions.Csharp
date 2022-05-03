@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Net.Http;
+using System.Runtime.InteropServices;
 using System.Security.Cryptography.X509Certificates;
 
 using ArmoniK.Api.gRPC.V1;
@@ -118,10 +119,22 @@ namespace ArmoniK.DevelopmentKit.GridServer.Client
           var clientCertPem = File.ReadAllText(clientCertFilename);
           var clientKeyPem  = File.ReadAllText(clientKeyFilename);
 
+
           var cert = X509Certificate2.CreateFromPem(clientCertPem,
                                                     clientKeyPem);
 
+          // Resolve issue with Windows on pem bug with windows
+          // https://github.com/dotnet/runtime/issues/23749#issuecomment-388231655
+
+          if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+          {
+            var originalCert = cert;
+            cert = new X509Certificate2(cert.Export(X509ContentType.Pkcs12));
+            originalCert.Dispose();
+          }
+
           httpClientHandler.ClientCertificates.Add(cert);
+
         }
       }
 
