@@ -5,7 +5,9 @@ using Grpc.Core;
 #endif
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Net.Http;
+using System.Security.Cryptography.X509Certificates;
 
 using ArmoniK.Api.gRPC.V1;
 using ArmoniK.DevelopmentKit.Common;
@@ -89,25 +91,48 @@ namespace ArmoniK.DevelopmentKit.GridServer.Client
       var credentials = uri.Scheme == Uri.UriSchemeHttps ? new SslCredentials() : ChannelCredentials.Insecure;
 
 #if NET5_0_OR_GREATER
- HttpClientHandler httpClientHandler = null;
-if (conf != null &&
-          conf.GetSection("Grpc").Exists() &&
-          conf.GetSection("Grpc").GetSection("SSLValidation").Exists() &&
-          conf.GetSection("Grpc")["SSLValidation"] == "disable")
+      HttpClientHandler httpClientHandler  = null;
+      var               controlPlanAddress = conf.GetSection("Grpc");
+
+      if (conf.GetSection("Grpc").Exists())
       {
-        httpClientHandler = new HttpClientHandler()
+        httpClientHandler = new HttpClientHandler();
+
+
+        if (controlPlanAddress.GetSection("SSLValidation").Exists() && controlPlanAddress["SSLValidation"] == "disable")
         {
-          ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator,
-        };
+          httpClientHandler.ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator;
+        }
+
+        var clientCertFilename = "";
+        var clientKeyFilename  = "";
+
+        if (controlPlanAddress.GetSection("ClientCert").Exists())
+          clientCertFilename = controlPlanAddress["ClientCert"];
+
+        if (controlPlanAddress.GetSection("ClientKey").Exists())
+          clientKeyFilename = controlPlanAddress["ClientKey"];
+
+        if (!(string.IsNullOrEmpty(clientKeyFilename) && string.IsNullOrEmpty(clientKeyFilename)))
+        {
+          var clientCertPem = File.ReadAllText(clientCertFilename);
+          var clientKeyPem  = File.ReadAllText(clientKeyFilename);
+
+          var cert = X509Certificate2.CreateFromPem(clientCertPem,
+                                                    clientKeyPem);
+
+          httpClientHandler.ClientCertificates.Add(cert);
+        }
       }
+
       var channelOptions = new GrpcChannelOptions()
       {
-        Credentials = uri.Scheme == Uri.UriSchemeHttps ? new SslCredentials() : ChannelCredentials.Insecure,
-        HttpHandler = httpClientHandler,
+        Credentials   = uri.Scheme == Uri.UriSchemeHttps ? new SslCredentials() : ChannelCredentials.Insecure,
+        HttpHandler   = httpClientHandler,
         LoggerFactory = LoggerFactory,
       };
 
-      var channel = GrpcChannel.ForAddress(properties_.ConnectionString,
+      var channel = GrpcChannel.ForAddress(controlPlanAddress["Endpoint"],
                                            channelOptions);
 
 #else

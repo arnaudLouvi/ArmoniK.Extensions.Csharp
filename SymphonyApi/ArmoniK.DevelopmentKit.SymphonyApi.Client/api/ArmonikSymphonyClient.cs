@@ -28,6 +28,8 @@ using ArmoniK.DevelopmentKit.Common;
 using ArmoniK.DevelopmentKit.SymphonyApi.Client.api;
 
 #if NET5_0_OR_GREATER
+using System.IO;
+
 using Grpc.Net.Client;
 #else
 using Grpc.Core;
@@ -38,6 +40,7 @@ using Microsoft.Extensions.Logging;
 
 using System.Collections.Generic;
 using System.Net.Http;
+using System.Security.Cryptography.X509Certificates;
 
 using Grpc.Core;
 
@@ -129,15 +132,35 @@ namespace ArmoniK.DevelopmentKit.SymphonyApi.Client
 
 #if NET5_0_OR_GREATER
       HttpClientHandler httpClientHandler = null;
-      if (conf != null &&
-          conf.GetSection("Grpc").Exists() &&
-          controlPlanAddress_.GetSection("SSLValidation").Exists() &&
-          controlPlanAddress_["SSLValidation"] == "disable")
+      if (conf != null && conf.GetSection("Grpc").Exists())
       {
-        httpClientHandler = new HttpClientHandler()
+        httpClientHandler = new HttpClientHandler();
+
+        if (controlPlanAddress_.GetSection("SSLValidation").Exists() && controlPlanAddress_["SSLValidation"] == "disable")
         {
-          ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator,
-        };
+          httpClientHandler.ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator;
+        } 
+
+        var clientCertFilename = "";
+        var clientKeyFilename  = "";
+
+        if (controlPlanAddress_.GetSection("ClientCert").Exists())
+          clientCertFilename = controlPlanAddress_["ClientCert"];
+
+        if (controlPlanAddress_.GetSection("ClientKey").Exists())
+          clientKeyFilename = controlPlanAddress_["ClientKey"];
+
+        if (!(string.IsNullOrEmpty(clientKeyFilename) && string.IsNullOrEmpty(clientKeyFilename)))
+        {
+          var clientCertPem = File.ReadAllText(clientCertFilename);
+          var clientKeyPem  = File.ReadAllText(clientKeyFilename);
+
+          var cert = X509Certificate2.CreateFromPem(clientCertPem,
+                                                    clientKeyPem);
+
+          httpClientHandler.ClientCertificates.Add(cert);
+
+        }
       }
 
       var channelOptions = new GrpcChannelOptions()
