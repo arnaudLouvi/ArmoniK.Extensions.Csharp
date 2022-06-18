@@ -10,6 +10,7 @@
   "profiles": {
     "ArmoniK.Samples.EndToEndTests": {
       "commandName": "Project",
+      "commandLineArgs": "CheckTryGetResultsClient",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
       },

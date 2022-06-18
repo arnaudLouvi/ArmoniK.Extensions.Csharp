@@ -49,11 +49,11 @@ namespace ArmoniK.DevelopmentKit.Common
     /// <param name="allowDerivedExceptions">If true, exceptions deriving from the specified exception type are ignored as well. Defaults to False</param>
     /// <returns>When one of the retries succeeds, return the value the operation returned. If not, an exception is thrown.</returns>
     public static void WhileException(
-      int    retries,
-      int    delayMs,
-      Action operation,
-      bool   allowDerivedExceptions = false,
-      params Type[]   exceptionType
+      int           retries,
+      int           delayMs,
+      Action        operation,
+      bool          allowDerivedExceptions = false,
+      params Type[] exceptionType
     )
     {
       // Do all but one retries in the loop
@@ -70,7 +70,7 @@ namespace ArmoniK.DevelopmentKit.Common
           // Oops - it did NOT succeed!
           if (
             exceptionType == null ||
-            exceptionType.Any( e => e == ex.GetType())  ||
+            exceptionType.Any(e => e == ex.GetType()) ||
             (allowDerivedExceptions && exceptionType.Any(e => ex.GetType().IsSubclassOf(e))))
           {
             // Ignore exceptions when exceptionType is not specified OR
@@ -99,11 +99,11 @@ namespace ArmoniK.DevelopmentKit.Common
     /// <param name="allowDerivedExceptions">If true, exceptions deriving from the specified exception type are ignored as well. Defaults to False</param>
     /// <returns>When one of the retries succeeds, return the value the operation returned. If not, an exception is thrown.</returns>
     public static T WhileException<T>(
-      int     retries,
-      int     delayMs,
-      Func<T> operation,
-      bool allowDerivedExceptions = false,
-      params Type[]    exceptionType
+      int           retries,
+      int           delayMs,
+      Func<T>       operation,
+      bool          allowDerivedExceptions = false,
+      params Type[] exceptionType
     )
     {
       // Do all but one retries in the loop
@@ -120,11 +120,17 @@ namespace ArmoniK.DevelopmentKit.Common
           if (
             exceptionType == null ||
             exceptionType.Any(e => e == ex.GetType()) ||
-            (allowDerivedExceptions && exceptionType.Any(e => ex.GetType().IsSubclassOf(e))))
+            allowDerivedExceptions && exceptionType.Any(e => ex.GetType().IsSubclassOf(e)))
           {
             // Ignore exceptions when exceptionType is not specified OR
             // the exception thrown was of the specified exception type OR
             // the exception thrown is derived from the specified exception type and we allow that
+            Thread.Sleep(delayMs);
+          }
+          else if (allowDerivedExceptions && ex is AggregateException && 
+                   exceptionType.Any(typeEx => ex.InnerException != null && 
+                                               typeEx == ex.InnerException.GetType()))
+          {
             Thread.Sleep(delayMs);
           }
           else
