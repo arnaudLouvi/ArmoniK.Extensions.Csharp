@@ -428,8 +428,10 @@ namespace ArmoniK.DevelopmentKit.Common.Submitter
                                                }
                                                catch (AggregateException ex)
                                                {
+                                                 Logger.LogWarning("Aggregate Exception TEST");
                                                  if (ex.InnerException is RpcException { StatusCode: StatusCode.NotFound })
                                                  {
+                                                   Logger.LogWarning("Aggregate Exception TEST RPC Exception");
                                                    return new byte[] { };
                                                  }
 
@@ -440,7 +442,7 @@ namespace ArmoniK.DevelopmentKit.Common.Submitter
 
                                                var taskOutput = ControlPlaneService.TryGetTaskOutput(resultRequest,
                                                                                                      cancellationToken: cancellationToken);
-                                               if (taskOutput.Status != TaskStatus.Error)
+                                               if (taskOutput.Status != TaskStatus.Error && taskOutput.Status != TaskStatus.Failed)
                                                  return response.Result;
 
                                                switch (taskOutput.TypeCase)
